@@ -69,7 +69,6 @@ class TestMe:
         mem.append(94)
         m =1
         line = infile.readline()
-        print(type(line))
         """Reading in Instructions DOES NOT INCLUDE BREAK"""
         while line != breakbin:
             instruction.append(line.replace('\n', ''))
@@ -94,8 +93,8 @@ class TestMe:
     def parseInstuctions(self):
         print ("Entering Parse Instuctions")
 
-        for i in range(len(opcode)):
-            print(opcode[i])
+        #for i in range(len(opcode)):
+
 
     def parseData(self):
         print("Entering Parse Data")
