@@ -1,6 +1,10 @@
 # Dissasember ARMv8 (Python 2.7)
 - Given a file of machine code (32bit) covert to Assembly Instructions
--- learned
+  - Completed Using
+    - Masking
+    - Bit Shifting
+    - Lists
+    - Classes 
 - Insructions that could be coverted
   - B
   - AND
