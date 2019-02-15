@@ -1,7 +1,10 @@
 
 import sys
 import os
+""" TRACER """
+trace = True
 
+""" Lists """
 instruction = []
 opcode = []
 opcodeStr = []
@@ -16,7 +19,7 @@ mem = []
 binMem = []
 breakbin = "11111110110111101111111111100111\n"
 
-### Masks
+""" Masks """
 rnMask = 0x3E0
 rmMask = 0x1F0000
 rdMask = 0x1F
@@ -31,15 +34,13 @@ inputFileName = 'test3_bin.txt'
 
 
 def main():
-    print("Main")
+    if trace: print("Main")
     x = TestMe()
     x.run()
 
 class TestMe:
     def __init__(self):
-        print('Constuctor TestMe')
-
-    def run(self):
+        if trace: print('Constuctor TestMe')
         global opcodeStr
         global arg1
         global arg2
@@ -55,30 +56,42 @@ class TestMe:
         global breakbin
         global inputFileName
         global outputFileName
-        print("Run")
+        global rnMask
+        global rmMask
+        global rdMask
+
+    def run(self):
+        if trace: print("Run")
         self.readAndSaveInstuctionsAndData()
         self.parseInstuctions()
+        self.parseData()
+        self.printInstctionsAndData()
 
     def readAndSaveInstuctionsAndData(self):
         # DONE
 
-        print("Entering Read And Save Instructions And Data")
+        if trace: print("Read And Save Instructions And Data")
 
         i = 0
         infile = open(inputFileName,"r")
-        mem.append(94)
-        m =1
+        m =0
         line = infile.readline()
-        """Reading in Instructions DOES NOT INCLUDE BREAK"""
+
+        """ Reading in Instructions DOES NOT INCLUDE BREAK """
         while line != breakbin:
             instruction.append(line.replace('\n', ''))
             opcode.append(int(instruction[i], base=2) >> 21)
             mem.append(94 + (4*m))
-            i = i + 1
-            m = m + 1
+            i += 1
+            m += 1
             line = infile.readline()
 
-        """Reading in Data"""
+        """ Saves BREAK in Instruction """
+        instruction.append(line.replace('\n', ''))
+        opcode.append(int(instruction[i], base=2) >> 21)
+        mem.append(94 + (4 * m))
+
+        """ Reading in Data """
         i = 0
         while True:
             line = infile.readline()
@@ -86,21 +99,60 @@ class TestMe:
                 break
             binMem.append(line)
             binMem[i] = binMem[i].replace('\n', '')
-            i=i+1
             mem.append(94 + (4 * m))
-            m = m + 1
+            i += 1
+            m += 1
+        return
 
     def parseInstuctions(self):
-        print ("Entering Parse Instuctions")
+        if trace: print ("Parse Instuctions")
 
-        #for i in range(len(opcode)):
+        for i in range(len(opcode)):
+
+            if opcode[i] == 1112:
+                opcodeStr.append("ADD")
+                arg1.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(instruction[i], base=2) & rmMask) >> 16)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", R" + str(arg1[i]))
+                arg3Str.append(", R" + str(arg2[i]))
+
+            elif opcode[i] == 1624:
+                opcodeStr.append("SUB")
+                arg1.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(instruction[i], base=2) & rmMask) >> 16)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", R" + str(arg1[i]))
+                arg3Str.append(", R" + str(arg2[i]))
+
+            elif opcode[i] == 2038:
+                opcodeStr.append("BREAK")
+                arg1.append('')
+                arg2.append('')
+                arg3.append('')
+                arg1Str.append("")
+                arg2Str.append("")
+                arg3Str.append("")
+
+            else:
+                opcodeStr.append("INVALID INSTRUCTION")
+                arg1.append('')
+                arg2.append('')
+                arg3.append('')
+                arg1Str.append("")
+                arg2Str.append("")
+                arg3Str.append("")
+        return
+
 
 
     def parseData(self):
-        print("Entering Parse Data")
+        if trace: print("Parse Data")
 
-    def printInstctions(self):
-        print ("Entering Print Insructions and Data")
+    def printInstctionsAndData(self):
+        if trace: print ("Print Insructions and Data")
 
 
 
