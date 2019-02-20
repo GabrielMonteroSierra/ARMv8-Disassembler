@@ -30,6 +30,7 @@ binMem = []
 data = []
 breakbin = "11111110110111101111111111100111\n"
 
+
 """ Masks """
 rnMask = 0x3E0
 rmMask = 0x1F0000
@@ -39,7 +40,8 @@ addrMask = 0x1FF000
 addr2Mask = 0xFFFFE0
 imsftMask = 0x600000
 imdataMask = 0x1FFFE0
-
+addr3Mask = 0x3FFFFFF
+inputFileName = "test3_bin.txt"
 
 
 def main():
@@ -118,8 +120,8 @@ class TestMe:
 
     def parseInstuctions(self):
         if trace: print ("Parse Instuctions")
-        #DONE - ADD , SUB ,B , AND, ORR
-        """TODO - ADDI , SUBI , LSL, LSR, EOR, LDUR, STUR, CBZ, CBNZ, MOVZ, MOVK , NOP"""
+        #DONE - ADD , SUB ,B , AND, ORR, LSR. LSL, EOR, NOP, ADDI , SUBI,
+        """TODO - LDUR, STUR, CBZ, CBNZ, MOVZ, MOVK """
 
         for i in range(len(opcode)):
 
@@ -133,7 +135,6 @@ class TestMe:
                 arg3Str.append(", R" + str(arg2[i]))
                 instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16]+ " " + instruction[i][16:22] + " "
                                    + instruction[i][22:27] + " " + instruction[i][27:32])
-
 
             elif opcode[i] == 1624:
                 opcodeStr.append("\tSUB")
@@ -156,7 +157,7 @@ class TestMe:
                 arg3Str.append("")
                 instrSpaced.append(instruction[i][:8] + " " + instruction[i][8:11] + " " + instruction[i][11:16] + " "
                                    + instruction[i][16:21] + " " + instruction[i][21:26] + " " + instruction[i][26:32])
-            elif opcode[i] == 1112:
+            elif opcode[i] == 1104:
                 opcodeStr.append("\tAND")
                 arg1.append((int(instruction[i], base=2) & rnMask) >> 5)
                 arg2.append((int(instruction[i], base=2) & rmMask) >> 16)
@@ -178,6 +179,79 @@ class TestMe:
                 instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16] + " " + instruction[i][16:22] + " "
                                    + instruction[i][22:27] + " " + instruction[i][27:32])
 
+            elif opcode[i] == 1690:
+                opcodeStr.append("\tLSR")
+                arg1.append((int(instruction[i], base=2) & shmtMask) >> 10)
+                arg2.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", R" + str(arg2[i]))
+                arg3Str.append(", #" + str(arg1[i]))
+                instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16] + " " + instruction[i][16:22] + " "
+                                    + instruction[i][22:27] + " " + instruction[i][27:32])
+
+            elif opcode[i] == 1691:
+                opcodeStr.append("\tLSL")
+                arg1.append((int(instruction[i], base=2) & shmtMask) >> 10)
+                arg2.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", R" + str(arg2[i]))
+                arg3Str.append(", #" + str(arg1[i]))
+                instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16] + " " + instruction[i][16:22] + " "
+                                    + instruction[i][22:27] + " " + instruction[i][27:32])
+
+            elif opcode[i] == 1872:
+                opcodeStr.append("\tEOR")
+                arg1.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(instruction[i], base=2) & rmMask) >> 16)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", R" + str(arg1[i]))
+                arg3Str.append(", R" + str(arg2[i]))
+                instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16] + " " + instruction[i][16:22] + " "
+                                    + instruction[i][22:27] + " " + instruction[i][27:32])
+
+            elif opcode[i] == 1690:
+                opcodeStr.append("\tNOP")
+                arg1Str.append("")
+                arg2Str.append("")
+                arg3Str.append("")
+                instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16] + " " + instruction[i][16:22] + " "
+                                    + instruction[i][22:27] + " " + instruction[i][27:32])
+
+            elif opcode[i] == 1160 or opcode[i] == 1161:
+                opcodeStr.append("\tADDI")
+                arg1.append((int(instruction[i], base=2) & imdataMask) >> 10)
+                arg2.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", [R" + str(arg2[i]))
+                arg3Str.append(", #" + str(arg1[i]) + "]")
+                instrSpaced.append(instruction[i][:10] + " " + instruction[i][10:22] + " " + instruction[i][22:27] + " "
+                                   + instruction[i][27:32] +'\t')
+
+            elif opcode[i] == 1672 or opcode[i] == 1673:
+                opcodeStr.append("\tSUBI")
+                arg1.append((int(instruction[i], base=2) & imdataMask) >> 10)
+                arg2.append((int(instruction[i], base=2) & rnMask) >> 5)
+                arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("\tR" + str(arg3[i]))
+                arg2Str.append(", [R" + str(arg2[i]))
+                arg3Str.append(", #" + str(arg1[i]) +"]")
+                instrSpaced.append(instruction[i][:10] + " " + instruction[i][10:22] + " " + instruction[i][22:27] + " "
+                                   + instruction[i][27:32] +'\t')
+
+            elif 160 <= opcode[i] <= 191:
+                opcodeStr.append("\tB")
+                arg1.append((int(instruction[i], base=2) >> 26))
+                arg2.append((int(instruction[i], base=2) & addr3Mask))
+                arg3.append('')
+                arg1Str.append("\t#"+str(arg2[i]))
+                arg2Str.append('')
+                arg3Str.append('')
+                instrSpaced.append(instruction[i][:6] + " " + instruction[i][6:]+'\t')
+
             else:
                 opcodeStr.append("\tINVALID INSTRUCTION")
                 arg1.append('')
@@ -198,15 +272,14 @@ class TestMe:
 
     def printInstctionsAndData(self):
         if trace: print ("Print Insructions and Data")
-        outfile = open(outputFileName,"w")
+        #outfile = open(outputFileName,"w")
         for i in range(len(instruction)):
-            line = (instrSpaced[i] + "\t" + mem[i] + opcodeStr[i] + arg1Str[i] + arg2Str[i] + arg3Str[i] +"\n")
-            outfile.write(line)
+            print(instrSpaced[i] + "\t" + mem[i] + opcodeStr[i] + arg1Str[i] + arg2Str[i] + arg3Str[i])
+            #outfile.write(line)
         for i in range(len(binMem)):
-            line = (binMem[i] + "\t" + memData[i] + "\t" +str(data[i])+ "\n")
-            outfile.write(line)
-        outfile.close()
+            print(binMem[i] + "\t" + memData[i] + "\t" +str(data[i]))
+            #outfile.write(line)
+        #outfile.close()
 
 if __name__ == "__main__":
     main()
-
