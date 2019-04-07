@@ -36,7 +36,7 @@ for i in range(32):
     register.append(0)
 
 inputFileName = "test3_bin.txt"
-outputFileName = "team6_out.dis.txt"
+outputFileName = "team6_out_dis.txt"
 
 """ Masks """
 rnMask = 0x3E0
@@ -48,6 +48,7 @@ addr2Mask = 0xFFFFE0
 imsftMask = 0x600000
 imdataMask = 0x1FFFE0
 addr3Mask = 0x3FFFFFF
+addr3MaskT =0x1FFFFFF
 shiftMask = 0x600000
 xORMask = 0xFFFFFFFF
 
@@ -110,15 +111,16 @@ class Disassembler:
         infile = open(inputFileName,"r")
         m = 0
         line = infile.readline()
-
+        line = line.rstrip()
         """ Reading in Instructions DOES NOT INCLUDE BREAK """
-        while line != breakbin:
-            instruction.append(line.replace('\n', ''))
+        while line != breakbin.rstrip():
+            instruction.append(line)
             opcode.append(int(instruction[i], base=2) >> 21)
             mem.append(str(96 + (4*m)))
             i += 1
             m += 1
             line = infile.readline()
+            line = line.rstrip()
 
         """ Saves BREAK in Instruction """
         instruction.append(line.replace('\n', ''))
@@ -143,8 +145,6 @@ class Disassembler:
 
     def parseInstuctions(self):
         if trace: print ("Parse Instuctions")
-        #DONE - ADD , SUB ,B , AND, ORR, LSR. LSL, EOR, NOP, ADDI , SUBI,
-        """TODO - LDUR, STUR, CBZ, CBNZ, MOVZ, MOVK """
 
         for i in range(len(opcode)):
 
@@ -235,7 +235,7 @@ class Disassembler:
                 instrSpaced.append(instruction[i][:11] + " " + instruction[i][11:16] + " " + instruction[i][16:22] + " "
                                     + instruction[i][22:27] + " " + instruction[i][27:32])
 
-            elif opcode[i] == 1690:
+            elif opcode[i] == 0:
                 opcodeStr.append("\tNOP")
                 arg1Str.append("")
                 arg2Str.append("")
@@ -267,8 +267,8 @@ class Disassembler:
 
             elif 160 <= opcode[i] <= 191:
                 opcodeStr.append("\tB")
-                arg1.append((int(instruction[i], base=2) >> 26))
-                arg2.append(twos_comp((int(instruction[i], base=2) & addr3Mask),32))
+                arg1.append('')
+                arg2.append(twos_comp((int(instruction[i], base=2) & addr3Mask),26))
                 arg3.append('')
                 arg1Str.append("\t#"+str(arg2[i]))
                 arg2Str.append('')
@@ -381,31 +381,54 @@ class Simulator:
 
     def runSim(self):
         cycle = 0
+        pc = 0
+        while instruction[pc] != breakbin.rstrip():
 
-        while instruction[cycle] != breakbin.rstrip():
-            if opcode[cycle] == 1112:  # ADD
-                register[arg3[cycle]] = register[arg1[cycle]] + register[arg2[cycle]]
+            if opcode[pc] == 1112:  # ADD
+                register[arg3[pc]] = register[arg1[pc]] + register[arg2[pc]]
                 print("good")
-            elif opcode[cycle] == 1160 or opcode[cycle] == 1161:  # ADDI
-                register[arg3[cycle]] = register[arg2[cycle]] + arg1[cycle]
+            elif opcode[pc] == 1160 or opcode[pc] == 1161:  # ADDI
+                register[arg3[pc]] = register[arg2[pc]] + arg1[pc]
 
-            elif opcode == 1104:  # AND
-                register[arg3[cycle]] = register[arg1[cycle]] & register[arg2[cycle]]
-            else:.
-                print("Invalid")
+            elif opcode[pc] == 1104:  # AND
+                register[arg3[pc]] = register[arg1[pc]] & register[arg2[pc]]
 
-            self.printData(cycle)
+            elif opcode[pc] == 1691:  # LSL
+                register[arg3[pc]] = register[arg2[pc]] << arg1[pc]
+
+            elif opcode[pc] == 1690:  # LSR
+                if register[arg2[pc]] < 0:
+                    register[arg3[pc]] = (register[arg2[pc]] * -1) >> arg1[pc]
+                else:
+                    register[arg3[pc]] = (register[arg2[pc]] >> arg1[pc])
+
+            elif 160 <= opcode[pc] <= 191:  # B
+                self.printData(cycle, pc)
+                pc = pc + arg2[pc]
+
+            else:
+                print("Invalid Instuction")
+
+
+            if not(160 <= opcode[pc] <= 191):
+                self.printData(cycle, pc)
+                pc += 1
+
             cycle += 1
 
-    def printData(self,cycle):
+
+    def printData(self, cycle, pc):
         if trace: print("PrintData Simulator")
         print("====================\n")
-        print("cycle: " + str(cycle) + opcodeStr[cycle] + arg1Str[cycle] + arg2Str[cycle] + arg3Str[cycle] + "\n")
+        print("cycle:" + str(cycle) + " " + str(mem[cycle]) + opcodeStr[pc] + arg1Str[pc] + arg2Str[pc] + arg3Str[pc] + "\n")
         print("registers:")
         print("R00:\t" + str(register[0]) +"\t" + str(register[1]) + "\t" + str(register[2]) + "\t" + str(register[3]) + "\t" + str(register[4]) + "\t" + str(register[5]) + "\t" + str(register[6]) +"\t" + str(register[7]) )
         print("R08:\t" + str(register[8]) +"\t" + str(register[9]) + "\t" + str(register[10]) + "\t" + str(register[11]) + "\t" + str(register[12]) + "\t" + str(register[13]) + "\t" + str(register[14]) +"\t" + str(register[15]) )
         print("R16:\t" + str(register[16]) +"\t" + str(register[17]) + "\t" + str(register[18]) + "\t" + str(register[19]) + "\t" + str(register[20]) + "\t" + str(register[21]) + "\t" + str(register[22]) +"\t" + str(register[23]) )
         print("R24:\t" + str(register[24]) +"\t" + str(register[25] )+ "\t" + str(register[26]) + "\t" + str(register[27]) + "\t" + str(register[28]) + "\t" + str(register[29]) + "\t" + str(register[30]) +"\t" + str(register[31]) +"\n" )
+
+
+
 
 
 
@@ -417,23 +440,13 @@ elif opcode == 1624:#SUB
 
 elif opcode == 2038: #BREAK
 
-elif opcode == 1104: #AND
-
 elif opcode == 1360: #ORR
-
-elif opcode == 1690: #LSR
-
-elif opcode == 1691: #LSL
 
 elif opcode == 1872: #EOR
 
 elif opcode == 1690: #NOP
 
-elif opcode == 1160 or opcode == 1161: #ADDI
-
 elif opcode == 1672 or opcode == 1673: #SUBI
-
-elif 160 <= opcode <= 191: #B
 
 elif 1440 <= opcode <= 1447: #CBZ
 
