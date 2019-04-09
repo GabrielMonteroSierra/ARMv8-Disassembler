@@ -30,7 +30,8 @@ data = []
 breakbin = "11111110110111101111111111100111\n"
 #cycleAndInstruction = []
 register = []
-
+maxDataSize = 0
+dataEntered = False
 
 for i in range(32):
     register.append(0)
@@ -51,6 +52,8 @@ addr3Mask = 0x3FFFFFF
 addr3MaskT =0x1FFFFFF
 shiftMask = 0x600000
 xORMask = 0xFFFFFFFF
+cbzMask = 0xFFFFFF
+addi_subiMask = 0x3FFC00
 
 
 def twos_comp(val, bits):
@@ -139,6 +142,7 @@ class Disassembler:
             memData.append(str(int(mem[m]) + (4 * offset)))
             i += 1
             offset += 1
+            dataEntered = True
 
         infile.close()
         return
@@ -245,7 +249,7 @@ class Disassembler:
 
             elif opcode[i] == 1160 or opcode[i] == 1161:
                 opcodeStr.append("\tADDI")
-                arg1.append((int(instruction[i], base=2) & imdataMask) >> 10)
+                arg1.append(twos_comp((int(instruction[i], base=2) & addi_subiMask) >> 10, 12))
                 arg2.append((int(instruction[i], base=2) & rnMask) >> 5)
                 arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("\tR" + str(arg3[i]))
@@ -256,7 +260,7 @@ class Disassembler:
 
             elif opcode[i] == 1672 or opcode[i] == 1673:
                 opcodeStr.append("\tSUBI")
-                arg1.append((int(instruction[i], base=2) & imdataMask) >> 10)
+                arg1.append(twos_comp((int(instruction[i], base=2) & addi_subiMask) >> 10, 12))
                 arg2.append((int(instruction[i], base=2) & rnMask) >> 5)
                 arg3.append((int(instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("\tR" + str(arg3[i]))
@@ -277,8 +281,8 @@ class Disassembler:
 
             elif 1440 <= opcode[i] <= 1447:
                 opcodeStr.append("\tCBZ")
-                arg1.append((int(instruction[i], base=2) & addr2Mask) >> 5)
-                arg2.append(twos_comp((int(instruction[i], base=2) & rdMask),32))
+                arg1.append((int(instruction[i], base=2) & rdMask) >> 5)
+                arg2.append(twos_comp(((int(instruction[i], base=2) & cbzMask) >> 5),19))
                 arg3.append('')
                 arg1Str.append("\tR" + str(arg1[i]))
                 arg2Str.append(", #" + str(arg2[i]))
@@ -287,8 +291,8 @@ class Disassembler:
 
             elif 1448 <= opcode[i] <= 1455:
                 opcodeStr.append("\tCBNZ")
-                arg1.append((int(instruction[i], base=2) & addr2Mask) >> 5)
-                arg2.append(twos_comp((int(instruction[i], base=2) & rdMask), 32))
+                arg1.append((int(instruction[i], base=2) & rdMask) >> 5)
+                arg2.append(twos_comp(((int(instruction[i], base=2) & cbzMask) >> 5), 19))
                 arg3.append('')
                 arg1Str.append("\tR" + str(arg1[i]))
                 arg2Str.append(", #" + str(arg2[i]))
@@ -378,15 +382,18 @@ CLASS = SIMULATOR
 class Simulator:
     def __init__(self):
         if trace: print('Constuctor Simulator')
+        global maxDataSize
+        global printDataFlag
 
     def runSim(self):
-        cycle = 0
+        cycle = 1
         pc = 0
+        branchFlag = False
         while instruction[pc] != breakbin.rstrip():
 
             if opcode[pc] == 1112:  # ADD
                 register[arg3[pc]] = register[arg1[pc]] + register[arg2[pc]]
-                print("good")
+
             elif opcode[pc] == 1160 or opcode[pc] == 1161:  # ADDI
                 register[arg3[pc]] = register[arg2[pc]] + arg1[pc]
 
@@ -402,30 +409,93 @@ class Simulator:
                 else:
                     register[arg3[pc]] = (register[arg2[pc]] >> arg1[pc])
 
-            elif 160 <= opcode[pc] <= 191:  # B
+            elif opcode[pc] == 1624:  # SUB
+                register[arg3[pc]] = register[arg1[pc]] - register[arg2[pc]]
+
+            elif opcode[pc] == 1672 or opcode[pc] == 1673:  # SUBI
+                register[arg3[pc]] = register[arg2[pc]] - arg1[pc]
+
+            elif 160 <= opcode[pc] <= 191: #B
                 self.printData(cycle, pc)
                 pc = pc + arg2[pc]
+                branchFlag = True
+
+            elif opcode[pc] == 1984:  # STUR
+                # if the size of the data is to small it will grow
+                if dataEntered:
+                    while int(memData[len(memData) - 1],base=10) < register[arg2[pc]] + arg1[pc] * 4:
+                        data.append(0)
+                        last = int(memData[len(memData) - 1], base=10)
+                        memData.append(str(last + 4))
+                else:
+                    data.append(0)
+                    last = int(mem[len(mem) - 1], base=10)
+                    memData.append(str(last + 4))
+                    while int(memData[len(memData) - 1],base=10) < register[arg2[pc]] + arg1[pc] * 4:
+                        data.append(0)
+                        last = int(memData[len(memData) - 1], base=10)
+                        memData.append(str(last + 4))
+
+                index = 0
+                for k in range (len(memData)):
+                    if int(memData[k], base=10) == register[arg2[pc]] + arg1[pc] * 4:
+                        index = k
+                data[index] = str(register[arg3[pc]])
+
+            elif opcode[pc] == 1986:  # LDUR
+                index = 0
+                for k in range(len(memData)):
+                    if int(memData[k], base=10) == register[arg2[pc]] + arg1[pc] * 4:
+                        index = k
+                register[arg3[pc]] = data[index]
+
+            elif 1440 <= opcode[pc] <= 1447:  # CBZ
+                branchFlag = True # if it is equal it zero
+
+            elif 1448 <= opcode[pc] <= 1455:  # CBNZ
+                branchFlag = True # if  its not equal to zero
+
+            elif 1684 <= opcode[pc] <= 1687:  # MOVZ
+                print("")
+
+            elif 1940 <= opcode[pc] <= 1943:  # MOVK
+                print("")
 
             else:
-                print("Invalid Instuction")
+                print("")
 
 
-            if not(160 <= opcode[pc] <= 191):
+            if not branchFlag: # Regualr Pc + 4 (but using 1 for the array) :D
                 self.printData(cycle, pc)
                 pc += 1
 
             cycle += 1
-
+            branchFlag = False
 
     def printData(self, cycle, pc):
         if trace: print("PrintData Simulator")
         print("====================\n")
-        print("cycle:" + str(cycle) + " " + str(mem[cycle]) + opcodeStr[pc] + arg1Str[pc] + arg2Str[pc] + arg3Str[pc] + "\n")
+        print("cycle:" + str(cycle) + " " + str(mem[pc]) + opcodeStr[pc] + arg1Str[pc] + arg2Str[pc] + arg3Str[pc] + "\n")
         print("registers:")
         print("R00:\t" + str(register[0]) +"\t" + str(register[1]) + "\t" + str(register[2]) + "\t" + str(register[3]) + "\t" + str(register[4]) + "\t" + str(register[5]) + "\t" + str(register[6]) +"\t" + str(register[7]) )
         print("R08:\t" + str(register[8]) +"\t" + str(register[9]) + "\t" + str(register[10]) + "\t" + str(register[11]) + "\t" + str(register[12]) + "\t" + str(register[13]) + "\t" + str(register[14]) +"\t" + str(register[15]) )
         print("R16:\t" + str(register[16]) +"\t" + str(register[17]) + "\t" + str(register[18]) + "\t" + str(register[19]) + "\t" + str(register[20]) + "\t" + str(register[21]) + "\t" + str(register[22]) +"\t" + str(register[23]) )
         print("R24:\t" + str(register[24]) +"\t" + str(register[25] )+ "\t" + str(register[26]) + "\t" + str(register[27]) + "\t" + str(register[28]) + "\t" + str(register[29]) + "\t" + str(register[30]) +"\t" + str(register[31]) +"\n" )
+        print("data:")
+
+        # Makes sure Data has a mod 8 = 0 amount
+        while (len(data) % 8) != 0:
+            data.append(0)
+            last = int(memData[len(memData) -1],base=10)
+            memData.append(str(last + 4))
+
+        j = 0
+        # Prints the Data
+        while j <(len(memData)):
+            print(memData[j]+":" + str(data[j]) + "\t" + str(data[j+1]) + "\t" + str(data[j+2]) + "\t" + str(data[j+3]) + "\t" + str(data[j+4]) + "\t" + str(data[j+5])+ "\t" + str(data[j+6])+ "\t" + str(data[j+7]))
+            j += 8
+
+
 
 
 
