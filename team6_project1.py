@@ -36,13 +36,14 @@ dataEntered = False
 for i in range(32):
     register.append(0)
 
-inputFileName = "test3_bin.txt"
+inputFileName = "test2_bin.txt"
 outputFileName = "team6_out_dis.txt"
 
 """ Masks """
 rnMask = 0x3E0
 rmMask = 0x1F0000
 rdMask = 0x1F
+tempMask = 0x20
 shmtMask = 0xFC00
 addrMask = 0x1FF000
 addr2Mask = 0xFFFFE0
@@ -306,7 +307,20 @@ class Disassembler:
                 arg3.append((int(instruction[i], base=2) & rdMask))
                 arg1Str.append("\tR" + str(arg3[i]))
                 arg2Str.append(", " + str(arg2[i]))
-                arg3Str.append(", LSL " + str(arg1[i] * 16))
+
+                if arg1[i] == 0:
+                    arg1[i] = 0
+                    arg3Str.append(", LSL " + str(arg1[i]))
+                elif arg1[i] == 1:
+                    arg1[i] = 16
+                    arg3Str.append(", LSL " + str(arg1[i]))
+                elif arg1[i] == 2:
+                    arg1[i] = 32
+                    arg3Str.append(", LSL " + str(arg1[i]))
+                elif arg1[i] == 3:
+                    arg1[i] = 48
+                    arg3Str.append(", LSL " + str(arg1[i]))
+
                 instrSpaced.append(instruction[i][:9] + " " + instruction[i][9:11] + " " + instruction[i][11:27] + " "
                                    + instruction[i][27:32] )
 
@@ -317,7 +331,20 @@ class Disassembler:
                 arg3.append((int(instruction[i], base=2) & rdMask))
                 arg1Str.append("\tR" + str(arg3[i]))
                 arg2Str.append(", " + str(arg2[i]))
-                arg3Str.append(", LSL " + str(arg1[i] * 16))
+
+                if arg1[i] == 0:
+                    arg1[i] = 0
+                    arg3Str.append(", LSL " + str(arg1[i]))
+                elif arg1[i] == 1:
+                    arg1[i] = 16
+                    arg3Str.append(", LSL " + str(arg1[i]))
+                elif arg1[i] == 2:
+                    arg1[i] = 32
+                    arg3Str.append(", LSL " + str(arg1[i]))
+                elif arg1[i] == 3:
+                    arg1[i] = 48
+                    arg3Str.append(", LSL " + str(arg1[i]))
+
                 instrSpaced.append(instruction[i][:9] + " " + instruction[i][9:11] + " " + instruction[i][11:27] + " "
                                    + instruction[i][27:32] )
 
@@ -456,10 +483,16 @@ class Simulator:
                 branchFlag = True # if  its not equal to zero
 
             elif 1684 <= opcode[pc] <= 1687:  # MOVZ
-                print("")
+                register[arg3[pc]] = int(arg2[pc] * 2 ** arg1[pc])
 
             elif 1940 <= opcode[pc] <= 1943:  # MOVK
-                print("")
+                register[arg3[pc]] = int(register[arg3[pc]] + arg2[pc] * 2 ** arg1[pc])
+
+            elif opcode[pc] == 1360:  # ORR
+                register[arg3[pc]] = register[arg2[pc]] | register[arg1[pc]]
+
+            elif opcode[pc] == 1872:  # EOR
+                register[arg3[pc]] = register[arg2[pc]] ^ register[arg1[pc]]
 
             else:
                 print("")
@@ -475,7 +508,7 @@ class Simulator:
     def printData(self, cycle, pc):
         if trace: print("PrintData Simulator")
         print("====================\n")
-        print("cycle:" + str(cycle) + " " + str(mem[pc]) + opcodeStr[pc] + arg1Str[pc] + arg2Str[pc] + arg3Str[pc] + "\n")
+        print("cycle: " + str(cycle) + " " + str(mem[pc]) + opcodeStr[pc] + arg1Str[pc] + arg2Str[pc] + arg3Str[pc] + "\n")
         print("registers:")
         print("R00:\t" + str(register[0]) +"\t" + str(register[1]) + "\t" + str(register[2]) + "\t" + str(register[3]) + "\t" + str(register[4]) + "\t" + str(register[5]) + "\t" + str(register[6]) +"\t" + str(register[7]) )
         print("R08:\t" + str(register[8]) +"\t" + str(register[9]) + "\t" + str(register[10]) + "\t" + str(register[11]) + "\t" + str(register[12]) + "\t" + str(register[13]) + "\t" + str(register[14]) +"\t" + str(register[15]) )
