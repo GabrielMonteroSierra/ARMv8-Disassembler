@@ -477,10 +477,16 @@ class Simulator:
                 register[arg3[pc]] = data[index]
 
             elif 1440 <= opcode[pc] <= 1447:  # CBZ
-                branchFlag = True # if it is equal it zero
+                if arg1[pc] == 0:
+                    self.printData(cycle, pc)
+                    pc = pc + arg2[pc]
+                    branchFlag = True # if it is equal it zero
 
             elif 1448 <= opcode[pc] <= 1455:  # CBNZ
-                branchFlag = True # if  its not equal to zero
+                if arg1[pc] != 0:
+                    self.printData(cycle, pc)
+                    pc = pc + arg2[pc]
+                    branchFlag = True # if  its not equal to zero
 
             elif 1684 <= opcode[pc] <= 1687:  # MOVZ
                 register[arg3[pc]] = int(arg2[pc] * 2 ** arg1[pc])
