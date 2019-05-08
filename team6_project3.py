@@ -1,9 +1,10 @@
 import sys
 import os
 
+
 """ TRACER """
 trace = False
-
+"""
 for i in range(len(sys.argv)):
     if (sys.argv[i] == '-i' and i < (len(sys.argv) - 1)):
         inputFileName = sys.argv[i + 1]
@@ -12,6 +13,8 @@ for i in range(len(sys.argv)):
         outputFileName = sys.argv[i + 1] + "_dis.txt"
         outputFileNameSim = sys.argv[i + 1] + "_sim.txt"
         print (outputFileName)
+outfileSim = open(outputFileNameSim, "w")
+"""
 
 """ Lists """
 instruction = []
@@ -37,7 +40,6 @@ dataEntered = False
 for i in range(32):
     register.append(0)
 
-outfileSim = open(outputFileNameSim, "w")
 
 """ Masks """
 rnMask = 0x3E0
@@ -55,6 +57,17 @@ xORMask = 0xFFFFFFFF
 cbzMask = 0xFFFFFF
 addi_subiMask = 0x3FFC00
 
+"""Pre/Post Buffer Queues"""
+preIssue = list()
+preMEM = list()
+preALU = list()
+postMEM = list()
+postALU = list()
+
+
+
+
+pc = 0
 
 def twos_comp(val, bits):
     if(val &(1 << (bits -1))) != 0:
@@ -65,8 +78,9 @@ def main():
     if trace: print("Main")
     x = Disassembler()
     x.run()
-    y = Simulator()
-    y.runSim()
+    y = Pipeline()
+    y.run()
+
 
 """
 CLASS: DISASSEMBLER
@@ -415,6 +429,7 @@ class Disassembler:
 """
 CLASS = SIMULATOR
 """
+"""
 class Simulator:
     def __init__(self):
         if trace: print('Constuctor Simulator')
@@ -556,6 +571,115 @@ class Simulator:
             outfileSim.write(line)
         line = "\n\n"
         outfileSim.write(line)
+"""
+
+class Entry:
+    val1 = -1
+    val2 = -1
+    val3 = -1
+    reg1 = -1
+    reg2 = -1
+    reg3 = -1 # SAVING REGISTER (DESTINATION) USED ONLY FOR
+    opcode = -1
+    result = -1 # SAVE ANSWER OF ALU AND MEM INTO HERE
+
+
+
+class Pipeline:
+    def __init__(self):
+        if(trace): print("Pipline")
+        global preIssue
+        global preMEM
+        global preALU
+        global postALU
+        global postMEM
+        test = Entry()
+        global test
+        test.a1 = 1
+        test.a2 = 2
+        postALU.append(test)
+        postMEM.append(test)
+        preIssue.append(test)
+        preMEM.append(test)
+        preALU.append(test)
+
+
+
+    def run(self):
+        """TEMP CODE"""
+        wb = WB()
+        alu = ALU()
+        if len(postMEM) > 0 or len(postALU) > 0:
+            wb.run()
+        if len(preMEM) > 0:
+            print("DO MEM")
+        if len(preALU) > 0:
+            alu.run()
+        if len(preIssue) > 0:
+            print("DO ISSUE")
+        print("DO IF")
+
+
+class WB:
+    def __init__(self):
+        if (trace): print ("WB")
+
+    def run(self):
+        if len(postMEM) > 0:
+            temp = postMEM.pop(0)
+            register[temp.reg3] = temp.result
+        if len(postALU) > 0:
+            temp = postALU.pop(0) #TOP OF THE LIST
+            register[temp.reg3] = temp.result
+
+class ALU:
+    def __init__(self):
+        if(trace): print("ALU")
+
+    def run(self):
+        while len(preALU) > 0:
+            temp = preALU.pop(0)
+            if temp.opcode == 1112:  # ADD
+                temp.result = temp.val1 + temp.val2
+
+            elif temp.opcode == 1160 or temp.opcode == 1161:  # ADDI
+                temp.result = temp.val2 + temp.val1
+
+            elif temp.opcode == 1104:  # AND
+                temp.result = temp.val1 & temp.val2
+
+            elif temp.opcode == 1691:  # LSL
+                temp.result = temp.val2 << temp.val1
+
+            elif temp.opcode == 1690:  # LSR
+                if temp.val2 < 0:
+                    temp.result = (temp.val2 * -1) >> temp.val1
+                else:
+                    temp.result = (temp.val2 >> temp.val1)
+
+            elif temp.opcode == 1692:  # ASR
+                temp.result = (temp.val2 >> temp.val1)
+
+            elif temp.opcode == 1624:  # SUB
+                temp.result = temp.val1 - temp.val2
+
+            elif temp.opcode == 1672 or temp.opcode == 1673:  # SUBI
+                temp.result = temp.val2 - temp.val1
+
+            elif 1684 <= temp.opcode <= 1687:  # MOVZ
+                temp.result = int(temp.val2 * 2 ** temp.val1)
+
+            elif 1940 <= temp.opcode<= 1943:  # MOVK
+                temp.result = int(temp.val3 + temp.val2 * 2 ** temp.val1)
+
+            elif temp.opcode == 1360:  # ORR
+                temp.result = temp.val2 | temp.val1
+
+            elif temp.opcode == 1872:  # EOR
+                temp.result = temp.val2 ^ temp.val1
+
+            postALU.append(temp)
+
 
 
 
